@@ -17,30 +17,33 @@ namespace ZipAlignTool
         public Form1()
         {
             InitializeComponent();
-            FindZipAlignAPath();
+            FindZipAlignPath();
+            FindApkSignPath();
         }
-        private string StartPath = @"C:\Program Files (x86)\";
-        private void FindZipAlignAPath()
-        {
-           if (Directory.Exists(StartPath))
-            {
-                StartPath += @"Android\";
-                if (Directory.Exists(StartPath))
-                {
-                    StartPath += @"android-sdk\";
-                    if (Directory.Exists(StartPath))
-                    {
-                        StartPath += @"build-tools\";
-                        if (Directory.Exists(StartPath))
-                        {
-                            var latestVersion = Directory.GetDirectories(StartPath).OrderByDescending(d=>d).FirstOrDefault();
+        private string ZipAlignStartPath = @"C:\Program Files (x86)\";
+        private string ApkSignStartPath = @"C:\Program Files (x86)\";
 
-                            if (!string.IsNullOrWhiteSpace(latestVersion) && Directory.Exists((StartPath = latestVersion+"\\")))
+        private void FindZipAlignPath()
+        {
+            if (Directory.Exists(ZipAlignStartPath))
+            {
+                ZipAlignStartPath += @"Android\";
+                if (Directory.Exists(ZipAlignStartPath))
+                {
+                    ZipAlignStartPath += @"android-sdk\";
+                    if (Directory.Exists(ZipAlignStartPath))
+                    {
+                        ZipAlignStartPath += @"build-tools\";
+                        if (Directory.Exists(ZipAlignStartPath))
+                        {
+                            var latestVersion = Directory.GetDirectories(ZipAlignStartPath).OrderByDescending(d => d).FirstOrDefault();
+
+                            if (!string.IsNullOrWhiteSpace(latestVersion) && Directory.Exists((ZipAlignStartPath = latestVersion + "\\")))
                             {
-                                StartPath += @"zipalign.exe";
-                                if (File.Exists(StartPath))
+                                ZipAlignStartPath += @"zipalign.exe";
+                                if (File.Exists(ZipAlignStartPath))
                                 {
-                                    txtZipAlignPath.Text = StartPath;
+                                    txtZipAlignPath.Text = ZipAlignStartPath;
                                     return;
                                 }
                             }
@@ -48,7 +51,38 @@ namespace ZipAlignTool
                     }
                 }
             }
-            
+
+        }
+
+        private void FindApkSignPath()
+        {
+            if (Directory.Exists(ApkSignStartPath))
+            {
+                ApkSignStartPath += @"Android\";
+                if (Directory.Exists(ApkSignStartPath))
+                {
+                    ApkSignStartPath += @"android-sdk\";
+                    if (Directory.Exists(ApkSignStartPath))
+                    {
+                        ApkSignStartPath += @"build-tools\";
+                        if (Directory.Exists(ApkSignStartPath))
+                        {
+                            var latestVersion = Directory.GetDirectories(ApkSignStartPath).OrderByDescending(d => d).FirstOrDefault();
+
+                            if (!string.IsNullOrWhiteSpace(latestVersion) && Directory.Exists((ApkSignStartPath = latestVersion + "\\")))
+                            {
+                                ApkSignStartPath += @"apksigner.bat";
+                                if (File.Exists(ApkSignStartPath))
+                                {
+                                    txtApkSignPath.Text = ApkSignStartPath;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         }
 
         private void BtnAlign_Click(object sender, EventArgs e)
@@ -68,33 +102,88 @@ namespace ZipAlignTool
             }
             var fName = Path.GetFileName(inFilePath);
             string outFilePath = Directory.CreateDirectory(inFilePath.Substring(0, inFilePath.IndexOf(fName)) + $@"Aligned_{DateTime.Now.ToString("dd-MM-yy HH-mm-ss")}").FullName;
-            outFilePath += @"\"+fName;
+            outFilePath += @"\" + fName;
             txtOutApkFilePath.Text = outFilePath;
 
 
-            if(MessageBox.Show("Calculate? ", "", MessageBoxButtons.OK) == DialogResult.OK)
+            if (MessageBox.Show("Calculate? ", "", MessageBoxButtons.OK) == DialogResult.OK)
             {
                 var args = $"-v 4 \"{inFilePath}\" \"{outFilePath}\"";
                 //var pi = new ProcessStartInfo(zipAlignPath, args);
-
                 try
                 {
-                    Process process = new Process();
-                    ProcessStartInfo startInfo = new ProcessStartInfo
+                   var t =  Task.Run(() =>
                     {
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        FileName = zipAlignPath,
-                        Arguments = "/C " + args
-                    };
-                    process.StartInfo = startInfo;
-                    process.Start();
-                    process.WaitForExit();
+                        Process process = new Process();
+                        ProcessStartInfo startInfo = new ProcessStartInfo
+                        {
+                            WindowStyle = ProcessWindowStyle.Hidden,
+                            FileName = zipAlignPath,
+                            Arguments = "/C " + args
+                        };
+                        process.StartInfo = startInfo;
+                        process.Start();
+                        process.WaitForExit();
+                    });
+                    t.Wait();
+                    txtInKsPath.Text = outFilePath;
+                    //txtOutApkSignPath.Text = outFilePath;
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message);
                 }
+            }
+        }
 
+        private void BtnSign_Click(object sender, EventArgs e)
+        {
+            string signApkPath;
+            if (string.IsNullOrEmpty((signApkPath = txtApkSignPath.Text)) || !File.Exists(signApkPath))
+            {
+                MessageBox.Show("Please verify that the Apk Sign file path is correct and the ApkSigner.bat exists.");
+                return;
+            }
+
+            string inKsFilePath;
+            if (string.IsNullOrEmpty((inKsFilePath = txtInKsPath.Text)) || !File.Exists(inKsFilePath))
+            {
+                MessageBox.Show("In Ks file path is empty or file is missing");
+                return;
+            }
+
+
+            string inFilePath;
+            if (string.IsNullOrEmpty((inFilePath = txtInApkSignPath.Text)) || !File.Exists(inFilePath))
+            {
+                MessageBox.Show("In APK file path is empty or file is missing");
+                return;
+            }            
+
+            if (MessageBox.Show("Sign? ", "", MessageBoxButtons.OK) == DialogResult.OK)
+            {
+                var args = $"sign --ks \"{inKsFilePath}\" \"{inFilePath}\"";
+                try
+                {
+                    var t = Task.Run(() =>
+                    {
+                        Process process = new Process();
+                        ProcessStartInfo startInfo = new ProcessStartInfo
+                        {
+                            WindowStyle = ProcessWindowStyle.Hidden,
+                            FileName = signApkPath,
+                            Arguments = "/C " + args
+                        };
+                        process.StartInfo = startInfo;
+                        process.Start();
+                        process.WaitForExit();
+                    });
+                    t.Wait();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
             }
         }
     }
