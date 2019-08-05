@@ -108,25 +108,28 @@ namespace ZipAlignTool
 
             if (MessageBox.Show("Calculate? ", "", MessageBoxButtons.OK) == DialogResult.OK)
             {
-                var args = $"-v 4 \"{inFilePath}\" \"{outFilePath}\"";
+                var args = $"/C \"{zipAlignPath}\" -v 4 \"{inFilePath}\" \"{outFilePath}\"";
                 //var pi = new ProcessStartInfo(zipAlignPath, args);
                 try
                 {
-                   var t =  Task.Run(() =>
-                    {
-                        Process process = new Process();
-                        ProcessStartInfo startInfo = new ProcessStartInfo
-                        {
-                            WindowStyle = ProcessWindowStyle.Hidden,
-                            FileName = zipAlignPath,
-                            Arguments = "/C " + args
-                        };
-                        process.StartInfo = startInfo;
-                        process.Start();
-                        process.WaitForExit();
-                    });
-                    t.Wait();
-                    txtInKsPath.Text = outFilePath;
+
+                    var t = System.Diagnostics.Process.Start("CMD.exe", args);
+                    t.WaitForExit();
+                    //var t =  Task.Run(() =>
+                    // {
+                    //     Process process = new Process();
+                    //     ProcessStartInfo startInfo = new ProcessStartInfo
+                    //     {
+                    //         WindowStyle = ProcessWindowStyle.Hidden,
+                    //         FileName = "cmd.exe",
+                    //         Arguments = "/C " + args
+                    //     };
+                    //     process.StartInfo = startInfo;
+                    //     process.Start();
+                    //     process.WaitForExit();
+                    // });
+                    // t.Wait();
+                    txtInApkSignPath.Text = outFilePath;
                     //txtOutApkSignPath.Text = outFilePath;
                 }
                 catch (Exception ex)
@@ -162,7 +165,7 @@ namespace ZipAlignTool
 
             if (MessageBox.Show("Sign? ", "", MessageBoxButtons.OK) == DialogResult.OK)
             {
-                var args = $"sign --ks \"{inKsFilePath}\" \"{inFilePath}\"";
+                var args = $"\"{signApkPath}\" sign --ks \"{inKsFilePath}\" \"{inFilePath}\"";
                 try
                 {
                     var t = Task.Run(() =>
@@ -171,7 +174,7 @@ namespace ZipAlignTool
                         ProcessStartInfo startInfo = new ProcessStartInfo
                         {
                             WindowStyle = ProcessWindowStyle.Hidden,
-                            FileName = signApkPath,
+                            FileName = "cmd.exe",
                             Arguments = "/C " + args
                         };
                         process.StartInfo = startInfo;
